@@ -15,11 +15,13 @@ import type { inboxSceneLogicType } from './inboxSceneLogicType'
 import { signalSourcesLogic } from './signalSourcesLogic'
 import { SignalReport, SignalReportArtefact, SignalReportArtefactResponse } from './types'
 
+const CLUSTERING_POLL_INTERVAL_MS = 5000
+
 export const inboxSceneLogic = kea<inboxSceneLogicType>([
     path(['scenes', 'inbox', 'inboxSceneLogic']),
 
     connect({
-        values: [signalSourcesLogic, ['hasNoSources']],
+        values: [signalSourcesLogic, ['hasNoSources', 'isClusteringRunning']],
     }),
 
     actions({
@@ -107,10 +109,19 @@ export const inboxSceneLogic = kea<inboxSceneLogicType>([
         ],
     }),
 
-    listeners(({ actions, values }) => ({
+    listeners(({ actions, values, cache }) => ({
         setSelectedReportId: ({ id }) => {
             if (id && !values.artefacts[id]) {
                 actions.loadArtefacts({ reportId: id })
+            }
+        },
+        loadSourceConfigsSuccess: () => {
+            clearInterval(cache.clusteringPollInterval)
+            if (values.isClusteringRunning) {
+                cache.clusteringPollInterval = setInterval(() => {
+                    actions.loadSourceConfigs()
+                    actions.loadReports()
+                }, CLUSTERING_POLL_INTERVAL_MS)
             }
         },
         runSessionAnalysis: async () => {
@@ -129,9 +140,12 @@ export const inboxSceneLogic = kea<inboxSceneLogicType>([
         },
     })),
 
-    events(({ actions }) => ({
+    events(({ actions, cache }) => ({
         afterMount: () => {
             actions.loadReports()
+        },
+        beforeUnmount: () => {
+            clearInterval(cache.clusteringPollInterval)
         },
     })),
 

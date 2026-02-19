@@ -39,6 +39,7 @@ export interface SignalSourceConfig {
     config: Record<string, any>
     created_at: string
     updated_at: string
+    status: SignalSourceConfigStatus | null
 }
 
 export enum SignalSourceProduct {
@@ -56,4 +57,10 @@ export interface ToggleSignalSourceParams {
     sourceType: SignalSourceType
     enabled: boolean
     config?: Record<string, any>
+}
+
+export enum SignalSourceConfigStatus {
+    RUNNING = 'running',
+    COMPLETED = 'completed',
+    FAILED = 'failed',
 }
