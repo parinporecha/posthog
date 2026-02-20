@@ -240,6 +240,12 @@ export const integrationsLogic = kea<integrationsLogicType>([
                 return integrations?.filter((x) => x.kind == 'slack')
             },
         ],
+        twigSlackIntegrations: [
+            (s) => [s.integrations],
+            (integrations) => {
+                return integrations?.filter((x) => x.kind === 'slack-twig')
+            },
+        ],
         getIntegrationsByKind: [
             (s) => [s.integrations],
             (integrations) => {
@@ -252,6 +258,12 @@ export const integrationsLogic = kea<integrationsLogicType>([
             (preflight) => {
                 // TODO: Change this to be based on preflight or something
                 return preflight?.slack_service?.available
+            },
+        ],
+        twigSlackAvailable: [
+            (s) => [s.preflight],
+            (preflight) => {
+                return preflight?.twig_slack_service?.available
             },
         ],
 
