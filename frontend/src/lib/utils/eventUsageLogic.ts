@@ -749,7 +749,7 @@ export const eventUsageLogic = kea<eventUsageLogicType>([
         }),
         reportSurveyEdited: (survey: Survey) => ({ survey }),
         reportSurveyArchived: (survey: Survey) => ({ survey }),
-        reportSurveyTemplateClicked: (template: SurveyTemplateType) => ({ template }),
+        reportSurveyTemplateClicked: (template: SurveyTemplateType, source?: string) => ({ template, source }),
         reportSurveyCycleDetected: (survey: Survey | NewSurvey) => ({ survey }),
         reportProductTourViewed: (tour: ProductTour) => ({ tour }),
         reportProductTourCreated: (tour: ProductTour, creationSource?: 'app' | 'toolbar') => ({
@@ -1821,9 +1821,10 @@ export const eventUsageLogic = kea<eventUsageLogicType>([
                 }),
             })
         },
-        reportSurveyTemplateClicked: ({ template }) => {
+        reportSurveyTemplateClicked: ({ template, source }) => {
             posthog.capture('survey template clicked', {
                 template,
+                source,
             })
         },
         reportSurveyCycleDetected: ({ survey }) => {

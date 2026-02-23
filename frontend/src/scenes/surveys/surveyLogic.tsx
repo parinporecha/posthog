@@ -530,7 +530,6 @@ export const surveyLogic = kea<surveyLogicType>([
         deleteBranchingLogic: true,
         archiveSurvey: true,
         setWritingHTMLDescription: (writingHTML: boolean) => ({ writingHTML }),
-        setSurveyTemplateValues: (template: Partial<NewSurvey>) => ({ template }),
         setSelectedPageIndex: (idx: number | null) => ({ idx }),
         setSelectedSection: (section: SurveyEditSection | null) => ({ section }),
         resetTargeting: true,
@@ -1210,10 +1209,6 @@ export const surveyLogic = kea<surveyLogicType>([
                             thankYouMessageHeader,
                         },
                     }
-                },
-                setSurveyTemplateValues: (_, { template }) => {
-                    const newTemplateSurvey = { ...NEW_SURVEY, ...template }
-                    return newTemplateSurvey
                 },
                 setQuestionBranchingType: (state, { questionIndex, type, specificQuestionIndex }) => {
                     const newQuestions = [...state.questions]
@@ -2254,12 +2249,6 @@ export const surveyLogic = kea<surveyLogicType>([
         },
     })),
     actionToUrl(({ values }) => ({
-        setSurveyTemplateValues: () => {
-            const hashParams = router.values.hashParams
-            hashParams['fromTemplate'] = true
-
-            return [urls.survey(values.survey.id), router.values.searchParams, hashParams]
-        },
         editingSurvey: ({ editing }) => {
             const searchParams = router.values.searchParams
             if (editing) {
