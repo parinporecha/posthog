@@ -213,3 +213,29 @@ def send_notifications_for_errors(alert: AlertConfiguration, error: dict) -> Non
     #     message.add_recipient(email=target)
 
     # message.send()
+
+
+def send_notifications_for_disabled(alert: AlertConfiguration, reason: str) -> None:
+    logger.info("Sending alert disabled notification", alert_id=alert.id, reason=reason)
+
+    subject = f"PostHog alert {alert.name} has been disabled"
+    campaign_key = f"alert-disabled-notification-{alert.id}-{timezone.now().timestamp()}"
+    insight_url = f"/project/{alert.team.pk}/insights/{alert.insight.short_id}"
+    alert_url = f"{insight_url}?alert_id={alert.id}"
+    message = EmailMessage(
+        campaign_key=campaign_key,
+        subject=subject,
+        template_name="alert_disabled",
+        template_context={
+            "alert_error": reason,
+            "insight_url": insight_url,
+            "insight_name": alert.insight.name,
+            "alert_url": alert_url,
+            "alert_name": alert.name,
+        },
+    )
+    targets = alert.get_subscribed_users_emails()
+    for target in targets:
+        message.add_recipient(email=target)
+
+    message.send()

@@ -850,6 +850,82 @@ class TestAlertChecks(APIBaseTest, ClickhouseDestroyTablesMixin):
         else:
             assert alert_check.calculated_value == 0
 
+    def test_ch_cannot_schedule_task_raises_for_retry(
+        self, mock_send_notifications_for_breaches: MagicMock, mock_send_errors: MagicMock
+    ) -> None:
+        self.set_thresholds(lower=1)
+
+        with patch("posthog.tasks.alerts.trends.calculate_for_query_based_insight") as mock_calculate:
+            mock_calculate.side_effect = CHQueryErrorCannotScheduleTask("cannot schedule")
+
+            import pytest
+
+            with pytest.raises(CHQueryErrorCannotScheduleTask):
+                check_alert(self.alert["id"])
+
+        assert mock_send_errors.call_count == 0
+
+    @patch("posthog.tasks.alerts.checks.send_notifications_for_disabled")
+    def test_invalid_condition_auto_disables_alert(
+        self,
+        mock_send_disabled: MagicMock,
+        mock_send_notifications_for_breaches: MagicMock,
+        mock_send_errors: MagicMock,
+    ) -> None:
+        alert = AlertConfiguration.objects.get(pk=self.alert["id"])
+        alert.condition = {}
+        alert.save()
+
+        check_alert(self.alert["id"])
+
+        alert.refresh_from_db()
+        assert alert.enabled is False
+        assert alert.state == AlertState.ERRORED
+
+        alert_check = AlertCheck.objects.filter(alert_configuration=self.alert["id"]).latest("created_at")
+        assert alert_check.state == AlertState.ERRORED
+        assert "invalid condition" in alert_check.error["message"]
+
+        assert mock_send_disabled.call_count == 1
+        assert mock_send_notifications_for_breaches.call_count == 0
+
+    @patch("posthog.tasks.alerts.checks.send_notifications_for_disabled")
+    def test_invalid_config_missing_type_auto_disables_alert(
+        self,
+        mock_send_disabled: MagicMock,
+        mock_send_notifications_for_breaches: MagicMock,
+        mock_send_errors: MagicMock,
+    ) -> None:
+        alert = AlertConfiguration.objects.get(pk=self.alert["id"])
+        alert.config = {"series_index": 0}
+        alert.save()
+
+        check_alert(self.alert["id"])
+
+        alert.refresh_from_db()
+        assert alert.enabled is False
+        assert mock_send_disabled.call_count == 1
+
+    @patch("posthog.tasks.alerts.checks.send_notifications_for_disabled")
+    def test_relative_alert_on_non_time_series_auto_disables(
+        self,
+        mock_send_disabled: MagicMock,
+        mock_send_notifications_for_breaches: MagicMock,
+        mock_send_errors: MagicMock,
+    ) -> None:
+        alert = AlertConfiguration.objects.get(pk=self.alert["id"])
+        alert.condition = {"type": "relative_increase"}
+        alert.save()
+
+        check_alert(self.alert["id"])
+
+        alert.refresh_from_db()
+        assert alert.enabled is False
+        assert alert.state == AlertState.ERRORED
+
+        alert_check = AlertCheck.objects.filter(alert_configuration=self.alert["id"]).latest("created_at")
+        assert "not compatible" in alert_check.error["message"]
+
 
 @freeze_time("2024-06-02T08:55:00.000Z")
 class TestAlertSubscriptionOrgMembership(APIBaseTest):
@@ -992,18 +1068,3 @@ class TestGetSubscribedUsersEmails(APIBaseTest):
 
         emails = self.alert.get_subscribed_users_emails()
         assert emails == []
-
-    def test_ch_cannot_schedule_task_raises_for_retry(
-        self, mock_send_notifications_for_breaches: MagicMock, mock_send_errors: MagicMock
-    ) -> None:
-        self.set_thresholds(lower=1)
-
-        with patch("posthog.tasks.alerts.trends.calculate_for_query_based_insight") as mock_calculate:
-            mock_calculate.side_effect = CHQueryErrorCannotScheduleTask("cannot schedule")
-
-            import pytest
-
-            with pytest.raises(CHQueryErrorCannotScheduleTask):
-                check_alert(self.alert["id"])
-
-        assert mock_send_errors.call_count == 0

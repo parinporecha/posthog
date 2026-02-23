@@ -12,7 +12,14 @@ from celery import shared_task
 from celery.canvas import chain
 from dateutil.relativedelta import relativedelta
 
-from posthog.schema import AlertCalculationInterval, AlertState, TrendsQuery
+from posthog.schema import (
+    AlertCalculationInterval,
+    AlertCondition,
+    AlertConditionType,
+    AlertState,
+    TrendsAlertConfig,
+    TrendsQuery,
+)
 
 from posthog.clickhouse.query_tagging import tag_queries
 from posthog.errors import CH_TRANSIENT_ERRORS
@@ -23,11 +30,13 @@ from posthog.ph_client import ph_scoped_capture
 from posthog.schema_migrations.upgrade_manager import upgrade_query
 from posthog.tasks.alerts.trends import check_trends_alert
 from posthog.tasks.alerts.utils import (
+    NON_TIME_SERIES_DISPLAY_TYPES,
     WRAPPER_NODE_KINDS,
     AlertEvaluationResult,
     calculation_interval_to_order,
     next_check_time,
     send_notifications_for_breaches,
+    send_notifications_for_disabled,
     send_notifications_for_errors,
     skip_because_of_weekend,
 )
@@ -243,6 +252,30 @@ def check_alert(alert_id: str, capture_ph_event: Callable = lambda *args, **kwar
             alert.snoozed_until = None
             alert.state = AlertState.NOT_FIRING
 
+    # validate alert config before attempting evaluation
+    validation_error = _validate_alert_config(alert)
+    if validation_error:
+        logger.warning("check_alert.auto_disabling", alert_id=alert.id, reason=validation_error)
+        alert.enabled = False
+        alert.last_checked_at = datetime.now(UTC)
+        alert.next_check_at = next_check_time(alert)
+        alert.save()
+        # save() override resets state to NOT_FIRING when disabled, so set ERRORED after
+        AlertConfiguration.objects.filter(pk=alert.pk).update(state=AlertState.ERRORED)
+        alert.refresh_from_db()
+
+        error = {"message": validation_error}
+        AlertCheck.objects.create(
+            alert_configuration=alert,
+            calculated_value=None,
+            condition=alert.condition,
+            targets_notified={"users": alert.get_subscribed_users_emails()},
+            state=AlertState.ERRORED,
+            error=error,
+        )
+        send_notifications_for_disabled(alert, validation_error)
+        return
+
     # we will attempt to check alert
     logger.info("check_alert", alert_id=alert.id)
     alert.last_checked_at = datetime.now(UTC)
@@ -370,6 +403,48 @@ def check_alert_and_notify_atomically(alert: AlertConfiguration, capture_ph_even
         # so we raise again as @transaction.atomic decorator won't commit db updates
         # TODO: later should have a way just to retry notification mechanism
         raise
+
+
+def _validate_alert_config(alert: AlertConfiguration) -> str | None:
+    """Validate alert configuration. Returns an error message if invalid, None if valid."""
+    try:
+        AlertCondition.model_validate(alert.condition)
+    except Exception:
+        return f"Alert has invalid condition: {alert.condition}"
+
+    if not alert.config or not isinstance(alert.config, dict) or alert.config.get("type") != "TrendsAlertConfig":
+        return f"Alert has invalid config (missing or unsupported type): {alert.config}"
+
+    try:
+        TrendsAlertConfig.model_validate(alert.config)
+    except Exception:
+        return f"Alert has invalid TrendsAlertConfig: {alert.config}"
+
+    insight = alert.insight
+    with upgrade_query(insight):
+        query = insight.query
+        if query is None:
+            return "Alert's insight has no query"
+
+        kind = get_from_dict_or_attr(query, "kind")
+        if kind in WRAPPER_NODE_KINDS:
+            query = get_from_dict_or_attr(query, "source")
+            kind = get_from_dict_or_attr(query, "kind")
+
+        if kind != "TrendsQuery":
+            return f"Alert's insight query kind '{kind}' is not supported (only TrendsQuery)"
+
+        condition = AlertCondition.model_validate(alert.condition)
+        if condition.type in (AlertConditionType.RELATIVE_INCREASE, AlertConditionType.RELATIVE_DECREASE):
+            try:
+                trends_query = TrendsQuery.model_validate(query)
+            except Exception as e:
+                return f"Alert's insight has an invalid TrendsQuery: {e}"
+            display = trends_query.trendsFilter and trends_query.trendsFilter.display
+            if display in NON_TIME_SERIES_DISPLAY_TYPES:
+                return f"Relative alert condition '{condition.type}' is not compatible with non-time-series display '{display}'"
+
+    return None
 
 
 def check_alert_for_insight(alert: AlertConfiguration) -> AlertEvaluationResult:
