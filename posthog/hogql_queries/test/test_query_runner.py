@@ -142,7 +142,7 @@ class TestQueryRunner(BaseTest):
                 "inCohortVia": InCohortVia.AUTO,
                 "materializationMode": MaterializationMode.LEGACY_NULL_AS_NULL,
                 "optimizeJoinedFilters": False,
-                "optimizeProjections": False,
+                "optimizeProjections": True,
                 "personsArgMaxVersion": PersonsArgMaxVersion.AUTO,
                 "personsOnEventsMode": PersonsOnEventsMode.PERSON_ID_OVERRIDE_PROPERTIES_JOINED,
                 "sessionTableVersion": SessionTableVersion.AUTO,
