@@ -49,6 +49,8 @@ import {
     ReplayTaxonomicFilters,
     replayTaxonomicFiltersProperties,
 } from 'scenes/session-recordings/filters/ReplayTaxonomicFilters'
+import { SavedFiltersTaxonomicGroup } from 'scenes/session-recordings/filters/SavedFiltersTaxonomicGroup'
+import { sessionRecordingSavedFiltersLogic } from 'scenes/session-recordings/filters/sessionRecordingSavedFiltersLogic'
 import { teamLogic } from 'scenes/teamLogic'
 
 import { actionsModel } from '~/models/actionsModel'
@@ -72,6 +74,7 @@ import {
     PropertyDefinition,
     PropertyDefinitionType,
     QueryBasedInsightModel,
+    SessionRecordingPlaylistType,
     TeamType,
 } from '~/types'
 
@@ -988,6 +991,18 @@ export const taxonomicFilterLogic = kea<taxonomicFilterLogicType>([
                             }
                         },
                         getPopoverHeader: () => 'Replay',
+                    },
+                    {
+                        name: 'Saved filters',
+                        searchPlaceholder: 'saved filters',
+                        type: TaxonomicFilterGroupType.ReplaySavedFilters,
+                        logic: sessionRecordingSavedFiltersLogic,
+                        value: 'savedFilters',
+                        render: SavedFiltersTaxonomicGroup,
+                        getName: (filter: SessionRecordingPlaylistType) =>
+                            filter.name || filter.derived_name || 'Unnamed',
+                        getValue: (filter: SessionRecordingPlaylistType) => filter.short_id,
+                        getPopoverHeader: () => 'Saved filter',
                     },
                     {
                         name: 'On this page',

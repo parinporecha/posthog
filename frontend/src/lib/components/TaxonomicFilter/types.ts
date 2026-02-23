@@ -217,6 +217,7 @@ export enum TaxonomicFilterGroupType {
     LogResourceAttributes = 'log_resource_attributes',
     // Misc
     Replay = 'replay',
+    ReplaySavedFilters = 'replay_saved_filters',
     RevenueAnalyticsProperties = 'revenue_analytics_properties',
     Resources = 'resources',
     ErrorTrackingProperties = 'error_tracking_properties',
