@@ -56,7 +56,6 @@ export function SurveyViewRedesign(): JSX.Element {
     const { survey, surveyLoading } = useValues(surveyLogic)
     const { editingSurvey, updateSurvey, archiveSurvey } = useActions(surveyLogic)
     const { deleteSurvey, duplicateSurvey, setSurveyToDuplicate } = useActions(surveysLogic)
-    const { guidedEditorEnabled } = useValues(surveysLogic)
     const { currentOrganization } = useValues(organizationLogic)
 
     const hasMultipleProjects = currentOrganization?.teams && currentOrganization.teams.length > 1
@@ -184,16 +183,8 @@ export function SurveyViewRedesign(): JSX.Element {
                         >
                             <LemonButton
                                 data-attr="edit-survey"
-                                onClick={
-                                    guidedEditorEnabled && survey.type === SurveyType.Popover
-                                        ? undefined
-                                        : () => editingSurvey(true)
-                                }
-                                to={
-                                    guidedEditorEnabled && survey.type === SurveyType.Popover
-                                        ? urls.surveyWizard(survey.id)
-                                        : undefined
-                                }
+                                onClick={survey.type === SurveyType.Popover ? undefined : () => editingSurvey(true)}
+                                to={survey.type === SurveyType.Popover ? urls.surveyWizard(survey.id) : undefined}
                                 type="secondary"
                                 size="small"
                             >
