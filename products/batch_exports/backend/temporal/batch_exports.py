@@ -844,6 +844,7 @@ class UpdateBatchExportBackfillStatusInputs:
 
     id: str
     status: str
+    latest_error: str | None = None
 
 
 @activity.defn
@@ -863,14 +864,14 @@ async def update_batch_export_backfill_model_status(inputs: UpdateBatchExportBac
     )
 
     if backfill.status in (BatchExportBackfill.Status.FAILED, BatchExportBackfill.Status.FAILED_RETRYABLE):
-        logger.error("Historical export failed")
+        logger.error("Batch export backfill failed: %s", inputs.latest_error)
 
     elif backfill.status == BatchExportBackfill.Status.CANCELLED:
-        logger.warning("Historical export was cancelled.")
+        logger.warning("Batch export backfill was canceled")
 
     else:
         logger.info(
-            "Successfully finished exporting historical batches in %s - %s",
+            "Successfully finished batch export backfill for range %s - %s",
             backfill.start_at,
             backfill.end_at,
         )
