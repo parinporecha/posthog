@@ -460,14 +460,18 @@ export const dataModelingLogic = kea<dataModelingLogicType>([
         availableDagIds: [
             (s) => [s.filteredNodes],
             (nodes: DataModelingNode[]): string[] => {
-                const viewableNodes = nodes.filter((n) => n.type === 'matview' || n.type === 'view')
+                const viewableNodes = nodes.filter(
+                    (n) => n.type === 'matview' || n.type === 'view' || n.type === 'endpoint'
+                )
                 return [...new Set(viewableNodes.map((n) => n.dag_id))].sort()
             },
         ],
         availableTypes: [
             (s) => [s.filteredNodes],
             (nodes: DataModelingNode[]): DataModelingNodeType[] => {
-                const viewableNodes = nodes.filter((n) => n.type === 'matview' || n.type === 'view')
+                const viewableNodes = nodes.filter(
+                    (n) => n.type === 'matview' || n.type === 'view' || n.type === 'endpoint'
+                )
                 return [...new Set(viewableNodes.map((n) => n.type))].sort()
             },
         ],
@@ -479,7 +483,7 @@ export const dataModelingLogic = kea<dataModelingLogicType>([
                 filterTypes: DataModelingNodeType[]
             ): DataModelingNode[] => {
                 return nodes
-                    .filter((n) => n.type === 'matview' || n.type === 'view')
+                    .filter((n) => n.type === 'matview' || n.type === 'view' || n.type === 'endpoint')
                     .filter((n) => filterDagIds.length === 0 || filterDagIds.includes(n.dag_id))
                     .filter((n) => filterTypes.length === 0 || filterTypes.includes(n.type))
             },
@@ -557,6 +561,7 @@ export const dataModelingLogic = kea<dataModelingLogicType>([
                         lastJobStatus: node.last_run_status,
                         lastRunAt: node.last_run_at,
                         syncInterval: node.sync_interval,
+                        endpointName: node.endpoint_name,
                     },
                     position: { x: 0, y: 0 },
                     deletable: true,

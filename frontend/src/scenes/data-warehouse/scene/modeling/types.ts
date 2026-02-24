@@ -27,6 +27,7 @@ export interface NodeData extends Record<string, unknown> {
     lastRunAt?: string
     lastJobStatus?: DataModelingJobStatus
     syncInterval?: DataWarehouseSyncInterval
+    endpointName?: string
 }
 
 export interface EdgeData extends Record<string, unknown> {

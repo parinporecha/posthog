@@ -30,6 +30,7 @@ class NodeSerializer(serializers.ModelSerializer):
     last_run_status = serializers.SerializerMethodField(read_only=True)
     user_tag = serializers.SerializerMethodField(read_only=True)
     sync_interval = serializers.SerializerMethodField(read_only=True)
+    endpoint_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Node
@@ -47,6 +48,7 @@ class NodeSerializer(serializers.ModelSerializer):
             "last_run_status",
             "user_tag",
             "sync_interval",
+            "endpoint_name",
         ]
         read_only_fields = [
             "upstream_count",
@@ -55,6 +57,7 @@ class NodeSerializer(serializers.ModelSerializer):
             "last_run_status",
             "user_tag",
             "sync_interval",
+            "endpoint_name",
         ]
 
     def get_upstream_count(self, node: Node) -> int:
@@ -76,6 +79,9 @@ class NodeSerializer(serializers.ModelSerializer):
         if node.saved_query:
             return sync_frequency_interval_to_sync_frequency(node.saved_query.sync_frequency_interval)
         return None
+
+    def get_endpoint_name(self, node: Node) -> str | None:
+        return node.properties.get("endpoint_name")
 
 
 class NodePagination(PageNumberPagination):

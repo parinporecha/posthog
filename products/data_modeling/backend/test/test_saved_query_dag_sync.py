@@ -388,6 +388,86 @@ class TestUpdateNodeType(BaseTest):
 
 
 @pytest.mark.django_db
+class TestSyncEndpointNodeType(BaseTest):
+    @parameterized.expand(
+        [
+            ("endpoint_origin", DataWarehouseSavedQuery.Origin.ENDPOINT, NodeType.ENDPOINT),
+            ("data_warehouse_origin", DataWarehouseSavedQuery.Origin.DATA_WAREHOUSE, NodeType.VIEW),
+        ]
+    )
+    def test_origin_determines_node_type(self, _name, origin, expected_type):
+        saved_query = DataWarehouseSavedQuery.objects.create(
+            name="test_view",
+            team=self.team,
+            query={"query": "SELECT 1", "kind": "HogQLQuery"},
+            origin=origin,
+        )
+
+        node = sync_saved_query_to_dag(saved_query)
+
+        assert node is not None
+        self.assertEqual(node.type, expected_type)
+
+    def test_endpoint_origin_takes_precedence_over_materialization(self):
+        saved_query = DataWarehouseSavedQuery.objects.create(
+            name="test_view",
+            team=self.team,
+            query={"query": "SELECT 1", "kind": "HogQLQuery"},
+            origin=DataWarehouseSavedQuery.Origin.ENDPOINT,
+            is_materialized=True,
+        )
+
+        node = sync_saved_query_to_dag(saved_query)
+
+        assert node is not None
+        self.assertEqual(node.type, NodeType.ENDPOINT)
+
+    def test_data_warehouse_origin_with_table_produces_mat_view(self):
+        from products.data_warehouse.backend.models import DataWarehouseTable
+
+        table = DataWarehouseTable.objects.create(
+            team=self.team,
+            name="test_table",
+            format=DataWarehouseTable.TableFormat.Parquet,
+            url_pattern="s3://test-bucket/path",
+        )
+        saved_query = DataWarehouseSavedQuery.objects.create(
+            name="test_view",
+            team=self.team,
+            query={"query": "SELECT 1", "kind": "HogQLQuery"},
+            origin=DataWarehouseSavedQuery.Origin.DATA_WAREHOUSE,
+            is_materialized=True,
+            table=table,
+        )
+
+        node = sync_saved_query_to_dag(saved_query)
+
+        assert node is not None
+        self.assertEqual(node.type, NodeType.MAT_VIEW)
+
+    def test_resyncing_endpoint_origin_preserves_endpoint_type(self):
+        saved_query = DataWarehouseSavedQuery.objects.create(
+            name="test_view",
+            team=self.team,
+            query={"query": "SELECT 1", "kind": "HogQLQuery"},
+            origin=DataWarehouseSavedQuery.Origin.ENDPOINT,
+        )
+
+        first_node = sync_saved_query_to_dag(saved_query)
+        assert first_node is not None
+        self.assertEqual(first_node.type, NodeType.ENDPOINT)
+
+        saved_query.query = {"query": "SELECT * FROM events", "kind": "HogQLQuery"}
+        saved_query.save()
+        second_node = sync_saved_query_to_dag(saved_query)
+
+        assert second_node is not None
+        self.assertEqual(first_node.id, second_node.id)
+        second_node.refresh_from_db()
+        self.assertEqual(second_node.type, NodeType.ENDPOINT)
+
+
+@pytest.mark.django_db
 class TestSkipValidation(BaseTest):
     def test_skip_validation_bypasses_cycle_detection(self):
         query_a = DataWarehouseSavedQuery.objects.create(

@@ -5241,7 +5241,7 @@ export interface DataWarehouseSavedQueryDependencies {
     downstream_count: number
 }
 
-export type DataModelingNodeType = 'table' | 'view' | 'matview'
+export type DataModelingNodeType = 'table' | 'view' | 'matview' | 'endpoint'
 
 export interface DataModelingNode {
     /** UUID */
@@ -5258,6 +5258,7 @@ export interface DataModelingNode {
     last_run_at?: string
     last_run_status?: DataModelingJobStatus
     sync_interval?: DataWarehouseSyncInterval
+    endpoint_name?: string
 }
 
 export interface DataModelingEdge {
