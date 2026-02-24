@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from django.conf import settings
 
+from posthog.schema import SignalInput
+
 from posthog.models import Team
 from posthog.sync import database_sync_to_async
 from posthog.temporal.common.client import async_connect
@@ -46,6 +48,17 @@ async def emit_signal(
             extra={"variant": "B", "p_value": 0.003},
         )
     """
+    SignalInput.model_validate(
+        {
+            "source_product": source_product,
+            "source_type": source_type,
+            "source_id": source_id,
+            "description": description,
+            "weight": weight,
+            "extra": extra or {},
+        }
+    )
+
     organization = await database_sync_to_async(lambda: team.organization)()
     if not organization.is_ai_data_processing_approved:
         return
