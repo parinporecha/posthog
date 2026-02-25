@@ -13,6 +13,7 @@ import { PluginEvent } from '~/plugin-scaffold'
 import { createRedisFromConfig } from '~/utils/db/redis'
 import { parseRawClickHouseEvent } from '~/utils/event'
 import { captureTeamEvent } from '~/utils/posthog'
+import { addGroupProperties } from '~/worker/ingestion/groups'
 import { BatchWritingGroupStore } from '~/worker/ingestion/groups/batch-writing-group-store'
 import { BatchWritingPersonsStore } from '~/worker/ingestion/persons/batch-writing-person-store'
 import { PersonsStore } from '~/worker/ingestion/persons/persons-store'
@@ -20,13 +21,13 @@ import { PersonsStore } from '~/worker/ingestion/persons/persons-store'
 import { createCreateEventStep } from '../../src/ingestion/event-processing/create-event-step'
 import { createEmitEventStep } from '../../src/ingestion/event-processing/emit-event-step'
 import { isOkResult } from '../../src/ingestion/pipelines/results'
-import { Hub, Person, PluginsServerConfig, Team } from '../../src/types'
+import { Hub, ISOTimestamp, Person, PluginsServerConfig, Team } from '../../src/types'
 import { closeHub, createHub } from '../../src/utils/db/hub'
 import { PostgresUse } from '../../src/utils/db/postgres'
+import { sanitizeEventName } from '../../src/utils/db/utils'
 import { UUIDT } from '../../src/utils/utils'
 import { PostgresPersonRepository } from '../../src/worker/ingestion/persons/repositories/postgres-person-repository'
 import { fetchDistinctIdValues, fetchPersons } from '../../src/worker/ingestion/persons/repositories/test-helpers'
-import { EventsProcessor } from '../../src/worker/ingestion/process-event'
 import { parseEventTimestamp } from '../../src/worker/ingestion/timestamps'
 import { createTestEventHeaders } from '../helpers/event-headers'
 import { resetKafka } from '../helpers/kafka'
@@ -118,20 +119,56 @@ describe('processEvent', () => {
             hub.groupRepository,
             hub.clickhouseGroupRepository
         )
-        const eventsProcessor = new EventsProcessor(
-            hub.teamManager,
-            hub.groupTypeManager,
-            hub.SKIP_UPDATE_EVENT_AND_PROPERTIES_STEP
+        const properties = normalizedEvent.properties!
+        const event = sanitizeEventName(normalizedEvent['event'])
+        if (properties['$ip'] && team.anonymize_ips) {
+            delete properties['$ip']
+        }
+        const parsedTimestamp = parseEventTimestamp(normalizedEvent, () => {})
+        const preparedEvent = {
+            eventUuid: normalizedEvent.uuid!,
+            event,
+            distinctId: String(normalizedEvent.distinct_id),
+            properties,
+            timestamp: parsedTimestamp.toISO() as ISOTimestamp,
+            teamId: team.id,
+            projectId: team.project_id,
+        }
+
+        // Group operations (previously inside EventsProcessor)
+        if (!hub.SKIP_UPDATE_EVENT_AND_PROPERTIES_STEP) {
+            await hub.teamManager.setTeamIngestedEvent(team, preparedEvent.properties)
+        }
+        preparedEvent.properties = await addGroupProperties(
+            team.id,
+            team.project_id,
+            preparedEvent.properties,
+            hub.groupTypeManager
         )
-        const preparedEvent = await eventsProcessor.processEvent(
-            String(normalizedEvent.distinct_id),
-            normalizedEvent,
-            team,
-            parseEventTimestamp(normalizedEvent, () => {}),
-            normalizedEvent.uuid!,
-            true,
-            groupStoreForBatch
-        )
+        if (preparedEvent.event === '$groupidentify') {
+            const {
+                $group_type: groupType,
+                $group_key: groupKey,
+                $group_set: groupPropertiesToSet,
+            } = preparedEvent.properties
+            if (groupType && groupKey) {
+                const groupTypeIndex = await hub.groupTypeManager.fetchGroupTypeIndex(
+                    team.id,
+                    team.project_id,
+                    groupType
+                )
+                if (groupTypeIndex !== null) {
+                    await groupStoreForBatch.upsertGroup(
+                        team.id,
+                        team.project_id,
+                        groupTypeIndex,
+                        groupKey.toString(),
+                        groupPropertiesToSet || {},
+                        parseEventTimestamp(normalizedEvent, () => {})
+                    )
+                }
+            }
+        }
         {
             const createEventStep = createCreateEventStep()
             const createResult = await createEventStep({
