@@ -72,14 +72,18 @@ describe('createPrepareEventStep', () => {
         }
     })
 
-    it('should sanitize event name when it is an object', async () => {
-        const event = createTestPluginEvent({ event: { foo: 'bar' } as any })
+    it.each([
+        { desc: 'object event name', eventName: { foo: 'bar' }, expected: '{"foo":"bar"}' },
+        { desc: 'array event name', eventName: ['event', 'list'], expected: '["event","list"]' },
+        { desc: 'long event name truncated to 200 chars', eventName: 'E'.repeat(300), expected: 'E'.repeat(200) },
+    ])('should sanitize event name: $desc', async ({ eventName, expected }) => {
+        const event = createTestPluginEvent({ event: eventName as any })
         const step = createPrepareEventStep<TestInput>()
         const result = await step(createInput({ normalizedEvent: event }))
 
         expect(result.type).toBe(PipelineResultType.OK)
         if (result.type === PipelineResultType.OK) {
-            expect(result.value.preparedEvent.event).toBe('{"foo":"bar"}')
+            expect(result.value.preparedEvent.event).toBe(expected)
         }
     })
 
