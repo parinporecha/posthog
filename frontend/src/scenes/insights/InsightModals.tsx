@@ -20,7 +20,6 @@ import { InsightLogicProps, InsightShortId, ItemMode } from '~/types'
 import { EndpointFromInsightModal } from 'products/endpoints/frontend/EndpointFromInsightModal'
 
 import { insightModalsLogic } from './insightModalsLogic'
-import { InsightTablePreviewModal } from './InsightTablePreviewModal'
 
 export function InsightModals({ insightLogicProps }: { insightLogicProps: InsightLogicProps }): JSX.Element | null {
     const { insightMode, itemId, alertId } = useValues(insightSceneLogic)
@@ -34,9 +33,8 @@ export function InsightModals({ insightLogicProps }: { insightLogicProps: Insigh
     const { push } = useActions(router)
 
     const theInsightModalsLogic = insightModalsLogic(insightLogicProps)
-    const { isAddToDashboardModalOpen, isTablePreviewModalOpen, isTerraformModalOpen } =
-        useValues(theInsightModalsLogic)
-    const { closeAddToDashboardModal, closeTablePreviewModal, closeTerraformModal } = useActions(theInsightModalsLogic)
+    const { isAddToDashboardModalOpen, isTerraformModalOpen } = useValues(theInsightModalsLogic)
+    const { closeAddToDashboardModal, closeTerraformModal } = useActions(theInsightModalsLogic)
 
     const canCreateAlertForInsight = areAlertsSupportedForInsight(query)
     const closeToInsightView = (): void => {
@@ -107,7 +105,6 @@ export function InsightModals({ insightLogicProps }: { insightLogicProps: Insigh
                 onClose={closeTerraformModal}
                 resource={{ type: 'insight', data: { ...insight, query, derived_name: derivedName } }}
             />
-            <InsightTablePreviewModal isOpen={isTablePreviewModalOpen} onClose={closeTablePreviewModal} />
         </>
     )
 }

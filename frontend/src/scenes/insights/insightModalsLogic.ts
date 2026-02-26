@@ -13,8 +13,6 @@ export const insightModalsLogic = kea<insightModalsLogicType>([
     actions({
         openAddToDashboardModal: true,
         closeAddToDashboardModal: true,
-        openTablePreviewModal: true,
-        closeTablePreviewModal: true,
         openTerraformModal: true,
         closeTerraformModal: true,
     }),
@@ -25,13 +23,6 @@ export const insightModalsLogic = kea<insightModalsLogicType>([
             {
                 openAddToDashboardModal: () => true,
                 closeAddToDashboardModal: () => false,
-            },
-        ],
-        isTablePreviewModalOpen: [
-            false,
-            {
-                openTablePreviewModal: () => true,
-                closeTablePreviewModal: () => false,
             },
         ],
         isTerraformModalOpen: [

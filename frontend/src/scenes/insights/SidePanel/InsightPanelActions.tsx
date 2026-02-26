@@ -2,7 +2,7 @@ import { useActions, useValues } from 'kea'
 import { router } from 'kea-router'
 import { Fragment } from 'react'
 
-import { IconCode2, IconInfo, IconPencil, IconPeople, IconShare } from '@posthog/icons'
+import { IconCode2, IconPencil, IconPeople, IconShare } from '@posthog/icons'
 
 import { exportsLogic } from 'lib/components/ExportButton/exportsLogic'
 import { SceneAddToDashboardButton } from 'lib/components/Scenes/InsightOrDashboard/SceneAddToDashboardButton'
@@ -47,9 +47,7 @@ export function InsightPanelActions({ insightLogicProps }: { insightLogicProps: 
     const { openCreateFromInsightModal } = useActions(endpointLogic({ tabId: insightProps.tabId || '' }))
     const { preflight } = useValues(preflightLogic)
     const { push } = useActions(router)
-    const { openAddToDashboardModal, openTablePreviewModal, openTerraformModal } = useActions(
-        insightModalsLogic(insightLogicProps)
-    )
+    const { openAddToDashboardModal, openTerraformModal } = useActions(insightModalsLogic(insightLogicProps))
 
     const siteUrl = preflight?.site_url || window.location.origin
     const isSavedInsight = hasDashboardItemId && !!insight?.id && !!insight?.short_id
@@ -180,16 +178,6 @@ export function InsightPanelActions({ insightLogicProps }: { insightLogicProps: 
                 <ButtonPrimitive onClick={openCreateFromInsightModal} menuItem>
                     <IconCode2 />
                     Create endpoint
-                </ButtonPrimitive>
-            ),
-        },
-        {
-            key: 'tablePreview',
-            visible: true,
-            button: () => (
-                <ButtonPrimitive onClick={openTablePreviewModal} menuItem data-attr={`${RESOURCE_TYPE}-preview-table`}>
-                    <IconInfo />
-                    Preview table data
                 </ButtonPrimitive>
             ),
         },
