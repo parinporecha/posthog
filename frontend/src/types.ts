@@ -5796,6 +5796,7 @@ export type RawBatchExportBackfill = {
     start_at?: string
     end_at?: string
     last_updated_at?: string
+    total_records_count?: number
     progress?: BatchExportBackfillProgress
 }
 
@@ -5816,6 +5817,7 @@ export type BatchExportBackfill = {
     start_at?: Dayjs
     end_at?: Dayjs
     last_updated_at?: Dayjs
+    total_records_count?: number
     progress?: BatchExportBackfillProgress
 }
 
