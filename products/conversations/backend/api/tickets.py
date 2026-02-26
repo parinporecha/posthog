@@ -275,6 +275,7 @@ class TicketViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
                     "is_assigned": getattr(instance, "assignment", None) is not None,
                 },
                 self.team,
+                request=request,
             )
         except Exception as e:
             capture_exception(e, {"ticket_id": str(instance.id)})
@@ -343,6 +344,7 @@ class TicketViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
                         "is_assigned": getattr(instance, "assignment", None) is not None,
                     },
                     self.team,
+                    request=request,
                 )
             except Exception as e:
                 capture_exception(e, {"ticket_id": str(instance.id)})

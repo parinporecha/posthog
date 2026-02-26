@@ -135,7 +135,9 @@ class PromptUnclear(Exception):
     pass
 
 
-def write_sql_from_prompt(prompt: str, *, current_query: Optional[str] = None, team: "Team", user: "User") -> str:
+def write_sql_from_prompt(
+    prompt: str, *, current_query: Optional[str] = None, team: "Team", user: "User", request=None
+) -> str:
     database = Database.create_for(team=team)
     context = HogQLContext(
         team_id=team.pk,
@@ -220,6 +222,7 @@ def write_sql_from_prompt(prompt: str, *, current_query: Optional[str] = None, t
             "prompt_tokens_total": prompt_tokens_total,
             "completion_tokens_total": completion_tokens_total,
         },
+        request=request,
     )
 
     if candidate_sql:
