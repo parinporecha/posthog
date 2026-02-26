@@ -897,6 +897,7 @@ class TestDashboard(APIBaseTest, QueryMatchingTest):
                 "tags_count": 0,
                 "template_key": "DEFAULT_APP",
             },
+            team=ANY,
             request=ANY,
         )
 
@@ -1576,6 +1577,7 @@ class TestDashboard(APIBaseTest, QueryMatchingTest):
                 "tags_count": 0,
                 "template_key": valid_template["template_name"],
             },
+            team=ANY,
             request=ANY,
         )
 

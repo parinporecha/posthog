@@ -374,6 +374,7 @@ class DashboardSerializer(DashboardMetadataSerializer):
                 "duplicated": bool(use_dashboard),
                 "dashboard_id": use_dashboard,
             },
+            team=dashboard.team,
             request=request,
         )
 
@@ -486,6 +487,7 @@ class DashboardSerializer(DashboardMetadataSerializer):
                 user,
                 "dashboard updated",
                 instance.get_analytics_metadata(),
+                team=instance.team,
                 request=self.context["request"],
             )
 
@@ -926,6 +928,7 @@ class DashboardsViewSet(
                     "dashboard_id": dashboard.pk,
                     "creation_context": creation_context,
                 },
+                team=dashboard.team,
                 request=request,
             )
         except Exception:

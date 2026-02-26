@@ -545,7 +545,9 @@ class CohortSerializer(serializers.ModelSerializer):
         else:
             cohort.enqueue_calculation(initiating_user=request.user)
 
-        report_user_action(request.user, "cohort created", cohort.get_analytics_metadata(), request=request)
+        report_user_action(
+            request.user, "cohort created", cohort.get_analytics_metadata(), team=cohort.team, request=request
+        )
         return cohort
 
     def _parse_csv_file(self, file) -> tuple[list[str], Iterator[list[str]]]:
@@ -980,6 +982,7 @@ class CohortSerializer(serializers.ModelSerializer):
                 **cohort.get_analytics_metadata(),
                 "updated_by_creator": request.user == cohort.created_by,
             },
+            team=cohort.team,
             request=request,
         )
 
