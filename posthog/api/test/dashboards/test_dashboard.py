@@ -886,8 +886,6 @@ class TestDashboard(APIBaseTest, QueryMatchingTest):
             self.user,
             "dashboard created",
             {
-                "$current_url": None,
-                "$session_id": mock.ANY,
                 "created_at": mock.ANY,
                 "dashboard_id": None,
                 "duplicated": False,
@@ -896,11 +894,10 @@ class TestDashboard(APIBaseTest, QueryMatchingTest):
                 "is_shared": False,
                 "item_count": 6,
                 "pinned": False,
-                "source": "web",
                 "tags_count": 0,
                 "template_key": "DEFAULT_APP",
-                "was_impersonated": False,
             },
+            request=ANY,
         )
 
     def test_dashboard_creation_validation(self):
@@ -1567,8 +1564,6 @@ class TestDashboard(APIBaseTest, QueryMatchingTest):
             self.user,
             "dashboard created",
             {
-                "$current_url": "https://posthog.com/my-referer",
-                "$session_id": "my-session-id",
                 "created_at": mock.ANY,
                 "creation_context": "onboarding",
                 "dashboard_id": dashboard["id"],
@@ -1578,11 +1573,10 @@ class TestDashboard(APIBaseTest, QueryMatchingTest):
                 "is_shared": False,
                 "item_count": 1,
                 "pinned": False,
-                "source": "web",
                 "tags_count": 0,
                 "template_key": valid_template["template_name"],
-                "was_impersonated": False,
             },
+            request=ANY,
         )
 
     def test_create_from_template_json_must_provide_at_least_one_tile(self) -> None:

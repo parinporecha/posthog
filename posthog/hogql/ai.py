@@ -222,6 +222,7 @@ def write_sql_from_prompt(
             "prompt_tokens_total": prompt_tokens_total,
             "completion_tokens_total": completion_tokens_total,
         },
+        team=team,
         request=request,
     )
 
