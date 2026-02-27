@@ -7,11 +7,11 @@ import { logger } from '../../utils/logger'
 import { captureException } from '../../utils/posthog'
 import { TeamManager } from '../../utils/team-manager'
 import { GroupTypeManager } from '../../worker/ingestion/group-type-manager'
-import { addGroupProperties } from '../../worker/ingestion/groups'
 import { BatchWritingGroupStore } from '../../worker/ingestion/groups/batch-writing-group-store'
 import { ok } from '../pipelines/results'
 import { ProcessingStep } from '../pipelines/steps'
 import { EventPipelineRunnerOptions } from './event-pipeline-options'
+import { addGroupProperties } from './groups'
 
 const EVENTS_WITHOUT_EVENT_DEFINITION = ['$$plugin_metrics']
 
