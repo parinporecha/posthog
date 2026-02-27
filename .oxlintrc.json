@@ -243,7 +243,7 @@
             }
         },
         {
-            "files": ["services/mcp/src/ui-apps/**/*.ts"],
+            "files": ["services/mcp/src/ui-apps/**/*.{ts,tsx}"],
             "rules": {
                 "no-console": [
                     "error",
@@ -255,6 +255,12 @@
         },
         {
             "files": ["docs/onboarding/**/*.tsx"],
+            "rules": {
+                "react/forbid-elements": "off"
+            }
+        },
+        {
+            "files": ["common/mosaic/**/*.{ts,tsx}", "services/mcp/src/ui-apps/**/*.{ts,tsx}"],
             "rules": {
                 "react/forbid-elements": "off"
             }
