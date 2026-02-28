@@ -2,6 +2,8 @@ import os
 import re
 import json
 import uuid
+import secrets
+import string
 from typing import Literal, Optional
 
 from django.conf import settings
@@ -581,3 +583,58 @@ class SandboxEnvironment(UUIDModel):
             return domains
 
         return []
+
+
+class TwigInviteCode(models.Model):
+    """Invite codes for Twig alpha access."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=50, unique=True, db_index=True, blank=True)
+    max_redemptions = models.PositiveIntegerField(default=1, help_text="Maximum number of redemptions. 0 = unlimited.")
+    redemption_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="Optional expiration date.")
+    description = models.TextField(blank=True, help_text="Internal admin note.")
+    created_by = models.ForeignKey(
+        "posthog.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="created_invite_codes"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "posthog_twig_invite_code"
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            alphabet = string.ascii_uppercase + string.digits
+            self.code = "".join(secrets.choice(alphabet) for _ in range(8))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.code
+
+    @property
+    def is_redeemable(self) -> bool:
+        if not self.is_active:
+            return False
+        if self.expires_at and self.expires_at <= timezone.now():
+            return False
+        if self.max_redemptions > 0 and self.redemption_count >= self.max_redemptions:
+            return False
+        return True
+
+
+class TwigInviteCodeRedemption(models.Model):
+    """Tracks each redemption of a Twig invite code."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invite_code = models.ForeignKey(TwigInviteCode, on_delete=models.CASCADE, related_name="redemptions")
+    user = models.ForeignKey("posthog.User", on_delete=models.CASCADE)
+    organization = models.ForeignKey("posthog.Organization", on_delete=models.SET_NULL, null=True, blank=True)
+    redeemed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "posthog_twig_invite_code_redemption"
+        unique_together = [("invite_code", "user")]
+
+    def __str__(self):
+        return f"{self.user} redeemed {self.invite_code}"

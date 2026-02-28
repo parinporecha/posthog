@@ -43,3 +43,56 @@ class SandboxSnapshotAdmin(admin.ModelAdmin):
         ("Metadata", {"fields": ("metadata",)}),
         ("Dates", {"fields": ("created_at", "updated_at")}),
     )
+
+
+class TwigInviteCodeRedemptionInline(admin.TabularInline):
+    model = None  # Set dynamically in __init_subclass__ to avoid circular import
+    extra = 0
+    can_delete = False
+    readonly_fields = ("id", "user", "organization", "redeemed_at")
+
+    @classmethod
+    def _resolve_model(cls):
+        if cls.model is None:
+            from .models import TwigInviteCodeRedemption
+
+            cls.model = TwigInviteCodeRedemption
+
+
+class TwigInviteCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "description", "is_active", "redemption_count", "max_redemptions", "expires_at", "created_at")
+    list_filter = ("is_active", "created_at")
+    search_fields = ("code", "description")
+    readonly_fields = ("id", "redemption_count", "created_at")
+    inlines = []  # Set in get_inlines to avoid circular import
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ("id", "code", "redemption_count", "created_at")
+        return ("id", "redemption_count", "created_at")
+
+    def get_fieldsets(self, request, obj=None):
+        if obj:
+            # Show auto-generated code as readonly on existing records
+            return (
+                (None, {"fields": ("id", "code", "description")}),
+                ("Limits", {"fields": ("is_active", "max_redemptions", "redemption_count", "expires_at")}),
+                ("Metadata", {"fields": ("created_by", "created_at")}),
+            )
+        # On add, omit code — it will be auto-generated on save
+        return (
+            (None, {"fields": ("id", "description")}),
+            ("Limits", {"fields": ("is_active", "max_redemptions", "expires_at")}),
+            ("Metadata", {"fields": ("created_by",)}),
+        )
+
+    def get_inlines(self, request, obj=None):
+        TwigInviteCodeRedemptionInline._resolve_model()
+        return [TwigInviteCodeRedemptionInline]
+
+
+class TwigInviteCodeRedemptionAdmin(admin.ModelAdmin):
+    list_display = ("invite_code", "user", "organization", "redeemed_at")
+    list_filter = ("redeemed_at",)
+    search_fields = ("user__email", "invite_code__code")
+    readonly_fields = ("id", "invite_code", "user", "organization", "redeemed_at")

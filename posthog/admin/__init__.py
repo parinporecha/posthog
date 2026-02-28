@@ -86,8 +86,14 @@ def register_all_admin():
     from products.desktop_recordings.backend.models import DesktopRecording
     from products.signals.backend.admin import SignalReportAdmin
     from products.signals.backend.models import SignalReport
-    from products.tasks.backend.admin import SandboxSnapshotAdmin, TaskAdmin, TaskRunAdmin
-    from products.tasks.backend.models import SandboxSnapshot, Task, TaskRun
+    from products.tasks.backend.admin import (
+        SandboxSnapshotAdmin,
+        TaskAdmin,
+        TaskRunAdmin,
+        TwigInviteCodeAdmin,
+        TwigInviteCodeRedemptionAdmin,
+    )
+    from products.tasks.backend.models import SandboxSnapshot, Task, TaskRun, TwigInviteCode, TwigInviteCodeRedemption
 
     admin.site.register(Organization, OrganizationAdmin)
     admin.site.register(OrganizationDomain, OrganizationDomainAdmin)
@@ -141,6 +147,8 @@ def register_all_admin():
     admin.site.register(Task, TaskAdmin)
     admin.site.register(TaskRun, TaskRunAdmin)
     admin.site.register(SandboxSnapshot, SandboxSnapshotAdmin)
+    admin.site.register(TwigInviteCode, TwigInviteCodeAdmin)
+    admin.site.register(TwigInviteCodeRedemption, TwigInviteCodeRedemptionAdmin)
 
     admin.site.register(DesktopRecording, DesktopRecordingAdmin)
 

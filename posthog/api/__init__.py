@@ -273,6 +273,11 @@ project_features_router = projects_router.register(
 project_tasks_router = projects_router.register(r"tasks", tasks.TaskViewSet, "project_tasks", ["team_id"])
 project_tasks_router.register(r"runs", tasks.TaskRunViewSet, "project_task_runs", ["team_id", "task_id"])
 
+# Twig invite codes (not project-scoped)
+from products.tasks.backend.api import TwigInviteCodeViewSet
+
+router.register(r"twig/invite_codes", TwigInviteCodeViewSet, "twig_invite_codes")
+
 # Signal reports endpoints
 projects_router.register(r"signal_reports", signals.SignalReportViewSet, "project_signal_reports", ["team_id"])
 projects_router.register(

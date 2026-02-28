@@ -25,7 +25,7 @@ from posthog.auth import OAuthAccessTokenAuthentication, PersonalAPIKeyAuthentic
 from posthog.permissions import APIScopePermission, PostHogFeatureFlagPermission
 from posthog.storage import object_storage
 
-from .models import Task, TaskRun
+from .models import Task, TaskRun, TwigInviteCode, TwigInviteCodeRedemption
 from .repository_readiness import compute_repository_readiness
 from .serializers import (
     ConnectionTokenResponseSerializer,
@@ -45,6 +45,7 @@ from .serializers import (
     TaskRunSessionLogsQuerySerializer,
     TaskRunUpdateSerializer,
     TaskSerializer,
+    TwigInviteCodeRedeemRequestSerializer,
 )
 from .services.connection_token import create_sandbox_connection_token
 from .temporal.client import execute_task_processing_workflow
@@ -820,3 +821,73 @@ class TaskRunViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
             return str(update.get("sessionUpdate", method)) if isinstance(update, dict) else method
 
         return method
+
+
+def _activate_twig_for_user(user) -> None:
+    """Enable Twig access for a user by setting the tasks feature flag enrollment person property."""
+    import posthoganalytics
+
+    posthoganalytics.capture(
+        distinct_id=str(user.distinct_id),
+        event="twig_invite_redeemed",
+        properties={
+            "$set": {"$feature_enrollment/tasks": "true"},
+        },
+    )
+
+
+@extend_schema(tags=["twig-invite-codes"])
+class TwigInviteCodeViewSet(viewsets.ViewSet):
+    """API for redeeming Twig alpha invite codes."""
+
+    authentication_classes = [SessionAuthentication, PersonalAPIKeyAuthentication, OAuthAccessTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @validated_request(
+        request_serializer=TwigInviteCodeRedeemRequestSerializer,
+        responses={
+            200: OpenApiResponse(description="Invite code redeemed successfully"),
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="Invalid or expired invite code"),
+        },
+        summary="Redeem invite code",
+        description="Redeem a Twig alpha invite code to enable access.",
+    )
+    @action(detail=False, methods=["post"], url_path="redeem")
+    def redeem(self, request, **kwargs):
+        code_str = request.validated_data["code"].strip()
+
+        try:
+            invite_code = TwigInviteCode.objects.get(code__iexact=code_str)
+        except TwigInviteCode.DoesNotExist:
+            return Response(
+                ErrorResponseSerializer({"error": "Invalid invite code"}).data,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not invite_code.is_redeemable:
+            return Response(
+                ErrorResponseSerializer({"error": "This invite code is no longer valid"}).data,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if TwigInviteCodeRedemption.objects.filter(invite_code=invite_code, user=request.user).exists():
+            return Response(
+                ErrorResponseSerializer({"error": "You have already redeemed this invite code"}).data,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        organization = request.user.organization if hasattr(request.user, "organization") else None
+
+        TwigInviteCodeRedemption.objects.create(
+            invite_code=invite_code,
+            user=request.user,
+            organization=organization,
+        )
+
+        from django.db.models import F
+
+        TwigInviteCode.objects.filter(id=invite_code.id).update(redemption_count=F("redemption_count") + 1)
+
+        _activate_twig_for_user(request.user)
+
+        return Response({"success": True})
